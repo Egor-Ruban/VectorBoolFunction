@@ -10,7 +10,7 @@ import (
 )
 
 //not more than 32
-type block uint8
+type block uint16
 
 type BoolFunction struct {
 	value [][]block
@@ -40,26 +40,46 @@ func log2(len int) (i int) {
 //	return
 //}
 //
-////интерфейс stringer, для вывода через стандартные функции
-//func (b BoolFunction) String() string {
-//	res := ""
-//	if b.bitSize < 16 {
-//		for i := 0; i < b.bitSize; i++ {
-//			res += string(((b.value[0] >> (15 - i)) & 1) + '0')
-//		}
-//	} else {
-//		for _, v := range b.value {
-//			res += fmt.Sprintf("%016b\n", v)
-//		}
-//	}
-//	return res
-//}
-//
-////красивый вывод в виде таблички
-//func (b BoolFunction) printPretty() (weight int) {
-//	//todo вывод табличкой
-//	return
-//}
+//интерфейс stringer, для вывода через стандартные функции
+func (b BoolFunction) String() string {
+	res := ""
+	blockSize := int(unsafe.Sizeof(block(0)) * 8)
+	formatString := "%0" + strconv.Itoa(blockSize) + "b."
+	for _, v := range b.value {
+		for j, v2 := range v {
+			diff := (b.mBlockSize * b.blockSize) - b.m
+			if diff > 0 && j == b.mBlockSize-1 {
+				res += fmt.Sprintf("%0"+strconv.Itoa(b.blockSize-diff)+"b", v2>>diff)
+			} else {
+				res += fmt.Sprintf(formatString, v2)
+			}
+		}
+		res += "\n"
+	}
+	return res
+}
+
+//красивый вывод в виде таблички
+func (b BoolFunction) printPretty() string {
+	res := ""
+	blockSize := int(unsafe.Sizeof(block(0)) * 8)
+	formatString := "%0" + strconv.Itoa(blockSize) + "b."
+	formatString2 := "%0" + strconv.Itoa(b.n) + "b : "
+	for i, v := range b.value {
+		res += fmt.Sprintf(formatString2, i)
+		for j, v2 := range v {
+			diff := (b.mBlockSize * b.blockSize) - b.m
+			if diff > 0 && j == b.mBlockSize-1 {
+				res += fmt.Sprintf("%0"+strconv.Itoa(b.blockSize-diff)+"b", v2>>diff)
+			} else {
+				res += fmt.Sprintf(formatString, v2)
+			}
+		}
+		res += "\n"
+	}
+	return res
+}
+
 //
 ////конструктор по строке
 //func newBF(str string) (BoolFunction, error) {
@@ -144,7 +164,6 @@ func newRandomVBF(n, m int) (BoolFunction, error) {
 	}
 
 	diff := (bf.mBlockSize * blockSize) - m
-	fmt.Println("diff = ", diff)
 	for i := 0; i < len; i++ {
 		bf.value[i] = make([]block, bf.mBlockSize)
 		for j, _ := range bf.value[i] {
@@ -152,9 +171,7 @@ func newRandomVBF(n, m int) (BoolFunction, error) {
 			if diff > 0 && j == bf.mBlockSize-1 {
 				bf.value[i][j] <<= diff
 			}
-			fmt.Print(bf.value[i][j], "|")
 		}
-		fmt.Println()
 	}
 	return bf, nil
 }
