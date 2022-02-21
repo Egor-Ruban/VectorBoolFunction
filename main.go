@@ -3,6 +3,6 @@ package main
 import "fmt"
 
 func main() {
-	bf, _ := newRandomBF(3, 20)
+	bf, _ := newRevVBF(5, 20)
 	fmt.Println(bf)
 }
