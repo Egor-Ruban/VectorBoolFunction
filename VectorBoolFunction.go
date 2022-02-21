@@ -152,7 +152,6 @@ func newRandomVBF(n, m int) (BoolFunction, error) {
 			if diff > 0 && j == bf.mBlockSize-1 {
 				bf.value[i][j] <<= diff
 			}
-
 			fmt.Print(bf.value[i][j], "|")
 		}
 		fmt.Println()
@@ -177,12 +176,28 @@ func newRevVBF(n, m int) (BoolFunction, error) {
 		blockSize:  blockSize,
 	}
 	if n < m {
-		//todo
-	} else if n == n {
-		if bf.mBlockSize > 1 {
-			return BoolFunction{}, errors.New("too much variables")
+		if m > blockSize {
+			return BoolFunction{}, errors.New("m is too big")
 		}
-		for i := 0; i < n; i++ {
+		l := ((uint64(1) << m) + 64 - 1) / 64 //[2^m/64] - сколько блоков по 64 надо для 2^m бит
+		isTaken := make([]uint64, l)
+		for i := range isTaken {
+			isTaken[i] = 0
+		}
+
+		for i := 0; i < bf.rows; i++ {
+			x := rand.Intn(1 << m)
+			if (isTaken[x/64]>>(64-x%64-1))&1 == 1 {
+				i--
+			} else {
+				bf.value[i] = make([]block, 1)
+				bf.value[i][0] = block(x << (blockSize - m))
+				isTaken[x/64] |= uint64(1) << (64 - x%64 - 1)
+			}
+		}
+		return bf, nil
+	} else if n == n {
+		for i := 0; i < bf.rows; i++ {
 			bf.value[i] = make([]block, bf.mBlockSize)
 			bf.value[i][0] = block(i)
 			for j := bf.blockSize; j > 0; j-- {
