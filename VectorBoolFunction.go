@@ -22,34 +22,30 @@ type BoolFunction struct {
 	blockSize  int
 }
 
-//вычисляет n из длины
-func log2(len int) (i int) {
-	for i = 1; (len>>i - 1) != 0; i++ {
+//подсчитывает вес вектора
+func (b BoolFunction) getWeight() (weight int) {
+	weight = 0
+	for _, v := range b.value {
+		for _, v2 := range v {
+			for ; v2 != 0; v2 = v2 & (v2 - 1) {
+				weight++
+			}
+		}
 	}
 	return
 }
 
-////подсчитывает вес вектора
-//func (b BoolFunction) getWeight() (weight int) {
-//	weight = 0
-//	for _, v := range b.value {
-//		for ; v != 0; v = v & (v - 1) {
-//			weight++
-//		}
-//	}
-//	return
-//}
-//
 //интерфейс stringer, для вывода через стандартные функции
 func (b BoolFunction) String() string {
 	res := ""
 	blockSize := int(unsafe.Sizeof(block(0)) * 8)
-	formatString := "%0" + strconv.Itoa(blockSize) + "b."
+	diff := (b.mBlockSize * b.blockSize) - b.m
+	formatString := "%0" + strconv.Itoa(blockSize) + "b."        //ordinary format string
+	formatString3 := "%0" + strconv.Itoa(b.blockSize-diff) + "b" //format string if last block is not filled
 	for _, v := range b.value {
 		for j, v2 := range v {
-			diff := (b.mBlockSize * b.blockSize) - b.m
 			if diff > 0 && j == b.mBlockSize-1 {
-				res += fmt.Sprintf("%0"+strconv.Itoa(b.blockSize-diff)+"b", v2>>diff)
+				res += fmt.Sprintf(formatString3, v2>>diff)
 			} else {
 				res += fmt.Sprintf(formatString, v2)
 			}
@@ -62,15 +58,18 @@ func (b BoolFunction) String() string {
 //красивый вывод в виде таблички
 func (b BoolFunction) printPretty() string {
 	res := ""
+	diff := (b.mBlockSize * b.blockSize) - b.m
 	blockSize := int(unsafe.Sizeof(block(0)) * 8)
-	formatString := "%0" + strconv.Itoa(blockSize) + "b."
-	formatString2 := "%0" + strconv.Itoa(b.n) + "b : "
+
+	formatString := "%0" + strconv.Itoa(blockSize) + "b."        //ordinary format string
+	formatString2 := "%0" + strconv.Itoa(b.n) + "b : "           //format string for variables
+	formatString3 := "%0" + strconv.Itoa(b.blockSize-diff) + "b" //format string if last block is not filled
+
 	for i, v := range b.value {
 		res += fmt.Sprintf(formatString2, i)
 		for j, v2 := range v {
-			diff := (b.mBlockSize * b.blockSize) - b.m
 			if diff > 0 && j == b.mBlockSize-1 {
-				res += fmt.Sprintf("%0"+strconv.Itoa(b.blockSize-diff)+"b", v2>>diff)
+				res += fmt.Sprintf(formatString3, v2>>diff)
 			} else {
 				res += fmt.Sprintf(formatString, v2)
 			}
@@ -126,20 +125,10 @@ func (b block) String() string {
 
 func (b *block) swap(j int, k int) {
 	blockSize := int(unsafe.Sizeof(block(0)) * 8)
-	/* Move all bits of first set to rightmost side */
 	set1 := (*b >> (blockSize - j - 1)) & 1
-
-	/* Move all bits of second set to rightmost side */
 	set2 := (*b >> (blockSize - k - 1)) & 1
-
-	/* Xor the two sets */
 	Xor := set1 ^ set2
-
-	/* Put the Xor bits back to their original positions */
 	Xor = (Xor << j) | (Xor << k)
-
-	/* Xor the 'Xor' with the original number so that the
-	   two sets are swapped */
 	result := *b ^ Xor
 	*b = result
 }
