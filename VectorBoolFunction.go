@@ -20,12 +20,14 @@ type BoolFunction struct {
 
 	mBlockSize int
 	blockSize  int
+
+	anf ANF
 }
 
 //подсчитывает вес вектора
-func (b BoolFunction) getWeight() (weight int) {
+func (bf BoolFunction) getWeight() (weight int) {
 	weight = 0
-	for _, v := range b.value {
+	for _, v := range bf.value {
 		for _, v2 := range v {
 			for ; v2 != 0; v2 = v2 & (v2 - 1) {
 				weight++
@@ -36,15 +38,15 @@ func (b BoolFunction) getWeight() (weight int) {
 }
 
 //интерфейс stringer, для вывода через стандартные функции
-func (b BoolFunction) String() string {
+func (bf BoolFunction) String() string {
 	res := ""
 	blockSize := int(unsafe.Sizeof(block(0)) * 8)
-	diff := (b.mBlockSize * b.blockSize) - b.m
-	formatString := "%0" + strconv.Itoa(blockSize) + "b."        //ordinary format string
-	formatString3 := "%0" + strconv.Itoa(b.blockSize-diff) + "b" //format string if last block is not filled
-	for _, v := range b.value {
+	diff := (bf.mBlockSize * bf.blockSize) - bf.m
+	formatString := "%0" + strconv.Itoa(blockSize) + "b."         //ordinary format string
+	formatString3 := "%0" + strconv.Itoa(bf.blockSize-diff) + "b" //format string if last block is not filled
+	for _, v := range bf.value {
 		for j, v2 := range v {
-			if diff > 0 && j == b.mBlockSize-1 {
+			if diff > 0 && j == bf.mBlockSize-1 {
 				res += fmt.Sprintf(formatString3, v2>>diff)
 			} else {
 				res += fmt.Sprintf(formatString, v2)
@@ -56,19 +58,19 @@ func (b BoolFunction) String() string {
 }
 
 //красивый вывод в виде таблички
-func (b BoolFunction) printPretty() string {
+func (bf BoolFunction) printPretty() string {
 	res := ""
-	diff := (b.mBlockSize * b.blockSize) - b.m
+	diff := (bf.mBlockSize * bf.blockSize) - bf.m
 	blockSize := int(unsafe.Sizeof(block(0)) * 8)
 
-	formatString := "%0" + strconv.Itoa(blockSize) + "b."        //ordinary format string
-	formatString2 := "%0" + strconv.Itoa(b.n) + "b : "           //format string for variables
-	formatString3 := "%0" + strconv.Itoa(b.blockSize-diff) + "b" //format string if last block is not filled
+	formatString := "%0" + strconv.Itoa(blockSize) + "b."         //ordinary format string
+	formatString2 := "%0" + strconv.Itoa(bf.n) + "b : "           //format string for variables
+	formatString3 := "%0" + strconv.Itoa(bf.blockSize-diff) + "b" //format string if last block is not filled
 
-	for i, v := range b.value {
+	for i, v := range bf.value {
 		res += fmt.Sprintf(formatString2, i)
 		for j, v2 := range v {
-			if diff > 0 && j == b.mBlockSize-1 {
+			if diff > 0 && j == bf.mBlockSize-1 {
 				res += fmt.Sprintf(formatString3, v2>>diff)
 			} else {
 				res += fmt.Sprintf(formatString, v2)
@@ -78,44 +80,6 @@ func (b BoolFunction) printPretty() string {
 	}
 	return res
 }
-
-//
-////конструктор по строке
-//func newBF(str string) (BoolFunction, error) {
-//	rows := rows(str)
-//	if rows > 1 && (rows&(rows-1)) == 0 {
-//		var bf BoolFunction
-//		if rows < 16 {
-//			bf = BoolFunction{
-//				make([]uint16, 1),
-//				1,
-//				log2(rows),
-//				rows,
-//			}
-//		} else {
-//			bf = BoolFunction{
-//				make([]uint16, rows/16),
-//				rows / 16,
-//				log2(rows),
-//				rows,
-//			}
-//		}
-//		for i, v := range str {
-//			if v != '0' && v != '1' {
-//				return BoolFunction{}, errors.New("wrong vector")
-//			}
-//			block := i / 16
-//			bf.value[block] <<= 1
-//			bf.value[block] |= uint16(v - '0')
-//		}
-//		if rows < 16 {
-//			bf.value[0] <<= 16 - rows
-//		}
-//		return bf, nil
-//	} else {
-//		return BoolFunction{}, errors.New("wrong input")
-//	}
-//}
 
 func (b block) String() string {
 	blockSize := int(unsafe.Sizeof(block(0)) * 8)
@@ -162,6 +126,7 @@ func newRandomVBF(n, m int) (BoolFunction, error) {
 			}
 		}
 	}
+	bf.anf, _ = generateRandomANF(bf.n, bf.rows, blockSize)
 	return bf, nil
 }
 
@@ -181,6 +146,7 @@ func newRevVBF(n, m int) (BoolFunction, error) {
 		m:          m,
 		blockSize:  blockSize,
 	}
+	bf.anf, _ = generateRandomANF(bf.n, bf.rows, blockSize)
 	if n < m {
 		if m > blockSize {
 			return BoolFunction{}, errors.New("m is too big")
