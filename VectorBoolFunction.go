@@ -10,14 +10,13 @@ import (
 )
 
 //not more than 32
-type block uint16
+type block uint32
 
 type BoolFunction struct {
-	value [][]block
-	n     int
-	m     int
-	rows  int
-
+	value      [][]block
+	n          int
+	m          int
+	rows       int
 	mBlockSize int
 	blockSize  int
 

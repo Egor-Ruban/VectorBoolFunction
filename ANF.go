@@ -36,6 +36,9 @@ func (anf ANF) String() string {
 			}
 		}
 	}
+	if len(res) == 0 {
+		return "0"
+	}
 	return res
 }
 
