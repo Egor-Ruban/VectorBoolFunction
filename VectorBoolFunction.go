@@ -168,13 +168,20 @@ func newRevVBF(n, m int) (BoolFunction, error) {
 		}
 		return bf, nil
 	} else if n == n {
+		diff := (bf.mBlockSize * blockSize) - m
 		for i := 0; i < bf.rows; i++ {
 			bf.value[i] = make([]block, bf.mBlockSize)
 			bf.value[i][0] = block(i)
-			for j := bf.blockSize; j > 0; j-- {
-				k := rand.Intn(j + 1)
-				bf.value[i][0].swap(j, k)
+			if diff > 0 {
+				bf.value[i][0] <<= diff
 			}
+		}
+		fmt.Println(bf.printPretty(), "--\n--")
+		for i := bf.rows - 1; i > 0; i-- {
+			j := rand.Intn(i + 1)
+			t := bf.value[i][0]
+			bf.value[i][0] = bf.value[j][0]
+			bf.value[j][0] = t
 		}
 		return bf, nil
 	}
