@@ -9,11 +9,8 @@ import (
 	"unsafe"
 )
 
-//not more than 32
-type block uint32
-
 type BoolFunction struct {
-	value      [][]block
+	value      []blocks
 	n          int
 	m          int
 	rows       int
@@ -21,6 +18,16 @@ type BoolFunction struct {
 	blockSize  int
 
 	anf ANF
+}
+
+func (bf BoolFunction) getFunction(k int) blocks {
+	howManyBlocks := (bf.rows + bf.blockSize - 1) / bf.blockSize
+	nf := make(blocks, howManyBlocks)
+	for i, v := range bf.value {
+		bit := v[k/bf.blockSize] >> (bf.blockSize - k%bf.blockSize - 1) & 1
+		nf[i/bf.blockSize] |= bit << (bf.blockSize - i%bf.blockSize - 1)
+	}
+	return nf
 }
 
 //подсчитывает вес вектора
@@ -80,22 +87,6 @@ func (bf BoolFunction) printPretty() string {
 	return res
 }
 
-func (b block) String() string {
-	blockSize := int(unsafe.Sizeof(block(0)) * 8)
-	formatString := "%0" + strconv.Itoa(blockSize) + "b"
-	return fmt.Sprintf(formatString, b)
-}
-
-func (b *block) swap(j int, k int) {
-	blockSize := int(unsafe.Sizeof(block(0)) * 8)
-	set1 := (*b >> (blockSize - j - 1)) & 1
-	set2 := (*b >> (blockSize - k - 1)) & 1
-	Xor := set1 ^ set2
-	Xor = (Xor << j) | (Xor << k)
-	result := *b ^ Xor
-	*b = result
-}
-
 //конструктор рандомный по длине
 func newRandomVBF(n, m int) (BoolFunction, error) {
 	rand.Seed(time.Now().UnixNano())
@@ -107,7 +98,7 @@ func newRandomVBF(n, m int) (BoolFunction, error) {
 	len := 1 << n
 
 	bf := BoolFunction{
-		value:      make([][]block, len),
+		value:      make([]blocks, len),
 		mBlockSize: (m + blockSize - 1) / blockSize,
 		rows:       len,
 		n:          n,
@@ -136,11 +127,11 @@ func newRevVBF(n, m int) (BoolFunction, error) {
 		return BoolFunction{}, errors.New("too much variables")
 	}
 
-	len := 1 << n
+	rows := 1 << n
 	bf := BoolFunction{
-		value:      make([][]block, len),
+		value:      make([]blocks, rows),
 		mBlockSize: (m + blockSize - 1) / blockSize,
-		rows:       len,
+		rows:       rows,
 		n:          n,
 		m:          m,
 		blockSize:  blockSize,
@@ -176,7 +167,6 @@ func newRevVBF(n, m int) (BoolFunction, error) {
 				bf.value[i][0] <<= diff
 			}
 		}
-		fmt.Println(bf.printPretty(), "--\n--")
 		for i := bf.rows - 1; i > 0; i-- {
 			j := rand.Intn(i + 1)
 			t := bf.value[i][0]

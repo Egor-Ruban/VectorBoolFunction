@@ -12,7 +12,7 @@ type ANF struct {
 	n              int
 	rows           int
 	blockSize      int
-	vector         []block
+	vector         blocks
 	blockLengthANF int
 }
 
@@ -80,4 +80,23 @@ func generateRandomANF(n, rows, blockSize int) (ANF, error) {
 	}
 
 	return anf, nil
+}
+
+func Moebius(function []block, rows int, blockSize int) ANF {
+	anf := ANF{
+		n:              log2(rows),
+		rows:           rows,
+		blockSize:      blockSize,
+		blockLengthANF: (rows + blockSize - 1) / blockSize,
+		vector:         make([]block, (rows+blockSize-1)/blockSize),
+	}
+
+	for i := range function {
+		anf.vector[i] = function[i]
+	}
+	n := log2(rows)
+	for i := 0; i < n; i++ {
+		anf.vector = anf.vector.xor(anf.vector.shiftRight(1 << i).and(generateMask(anf.blockLengthANF, i)))
+	}
+	return anf
 }
