@@ -9,6 +9,10 @@ import (
 //not more than 32
 type block uint16
 
+func blockSize() int {
+	return int(unsafe.Sizeof(block(0)) * 8)
+}
+
 func (b block) String() string {
 	blockSize := int(unsafe.Sizeof(block(0)) * 8)
 	formatString := "%0" + strconv.Itoa(blockSize) + "b"
