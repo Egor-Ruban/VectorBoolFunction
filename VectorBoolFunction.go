@@ -6,7 +6,15 @@ import (
 	"math/rand"
 	"strconv"
 	"time"
+	"unsafe"
 )
+
+//not more than 32
+type block uint32
+
+func blockSize() int {
+	return int(unsafe.Sizeof(block(0)) * 8)
+}
 
 type BoolFunction struct {
 	value     []block
@@ -45,7 +53,7 @@ func (bf BoolFunction) String() string {
 func newRandomVBF(n, m int) (BoolFunction, error) {
 	rand.Seed(time.Now().UnixNano())
 
-	if n >= blockSize() || m >= blockSize() {
+	if n > blockSize() || m > blockSize() {
 		return BoolFunction{}, errors.New("n or m is too big")
 	}
 
@@ -65,7 +73,7 @@ func newRandomVBF(n, m int) (BoolFunction, error) {
 
 func newRevVBF(n, m int) (BoolFunction, error) {
 	rand.Seed(time.Now().UnixNano())
-	if n >= blockSize() || m >= blockSize() {
+	if n > blockSize() || m > blockSize() {
 		return BoolFunction{}, errors.New("n or m is too big")
 	}
 
@@ -104,4 +112,155 @@ func newRevVBF(n, m int) (BoolFunction, error) {
 		return bf, nil
 	}
 	return BoolFunction{}, errors.New("n > m")
+}
+
+func (bf BoolFunction) shiftDown(k int) BoolFunction {
+	t := BoolFunction{
+		value:     make([]block, bf.rows),
+		rows:      bf.rows,
+		n:         bf.n,
+		m:         bf.m,
+		wasteBits: blockSize() - bf.m,
+	}
+
+	for i := bf.rows - 1; i >= k; i-- {
+		t.value[i] = bf.value[i-k]
+	}
+	return t
+}
+
+func (bf BoolFunction) shiftUp(k int) BoolFunction {
+	t := BoolFunction{
+		value:     make([]block, bf.rows),
+		rows:      bf.rows,
+		n:         bf.n,
+		m:         bf.m,
+		wasteBits: blockSize() - bf.m,
+	}
+
+	for i := 0; i < bf.rows-k; i++ {
+		t.value[i] = bf.value[i+k]
+	}
+	return t
+}
+
+func (bf BoolFunction) xor(bf2 BoolFunction) BoolFunction {
+	t := BoolFunction{
+		value:     make([]block, bf.rows),
+		rows:      bf.rows,
+		n:         bf.n,
+		m:         bf.m,
+		wasteBits: blockSize() - bf.m,
+	}
+
+	for i := 0; i < bf.rows; i++ {
+		t.value[i] = bf.value[i] ^ bf2.value[i]
+	}
+	return t
+}
+
+func (bf BoolFunction) and(bf2 BoolFunction) BoolFunction {
+	t := BoolFunction{
+		value:     make([]block, bf.rows),
+		rows:      bf.rows,
+		n:         bf.n,
+		m:         bf.m,
+		wasteBits: blockSize() - bf.m,
+	}
+
+	for i := 0; i < bf.rows; i++ {
+		t.value[i] = bf.value[i] & bf2.value[i]
+	}
+	return t
+}
+
+func (bf BoolFunction) or(bf2 BoolFunction) BoolFunction {
+	t := BoolFunction{
+		value:     make([]block, bf.rows),
+		rows:      bf.rows,
+		n:         bf.n,
+		m:         bf.m,
+		wasteBits: blockSize() - bf.m,
+	}
+
+	for i := 0; i < bf.rows; i++ {
+		t.value[i] = bf.value[i] | bf2.value[i]
+	}
+	return t
+}
+
+func (bf BoolFunction) generateMask(step int) BoolFunction {
+	mask := BoolFunction{
+		value:     make([]block, bf.rows),
+		rows:      bf.rows,
+		n:         bf.n,
+		m:         bf.m,
+		wasteBits: blockSize() - bf.m,
+	}
+	m := block(1<<blockSize() - 1)
+	for i := range mask.value {
+		if (i % (1 << step)) == 0 {
+			m ^= block(1<<blockSize() - 1)
+		}
+		mask.value[i] = m
+	}
+	return mask
+}
+
+func (bf BoolFunction) Moebius() BoolFunction {
+	anf := BoolFunction{
+		value:     make([]block, bf.rows),
+		rows:      bf.rows,
+		n:         bf.n,
+		m:         bf.m,
+		wasteBits: blockSize() - bf.m,
+	}
+
+	for i := range bf.value {
+		anf.value[i] = bf.value[i]
+	}
+	for i := 0; i < anf.n; i++ {
+		anf = anf.xor(anf.shiftDown(1 << i).and(anf.generateMask(i)))
+	}
+	return anf
+}
+
+func (bf BoolFunction) printANF() string {
+	if bf.n > 26 {
+		return "too many variables in ANF"
+	}
+
+	ANFs := make([]string, bf.m)
+	for j := 0; j < bf.m; j++ {
+		if (bf.value[0]>>(blockSize()-j-1))&1 == 1 {
+			ANFs[j] += "1"
+		}
+	}
+	for i := 1; i < bf.rows; i++ {
+		for j := 0; j < bf.m; j++ {
+			if (bf.value[i]>>(blockSize()-j-1))&1 == 1 {
+				if len(ANFs[j]) != 0 {
+					ANFs[j] += "+"
+				}
+				for k := 0; k < bf.n; k++ {
+					if (i>>k)&1 == 1 {
+						ANFs[j] += string(rune('z' - k))
+					}
+				}
+			}
+		}
+	}
+
+	res := ""
+	for i := range ANFs {
+		res += "anf" + strconv.Itoa(i) + " = "
+		if len(ANFs[i]) == 0 {
+			res += "0"
+		} else {
+			res += ANFs[i]
+		}
+		res += "\n"
+	}
+
+	return res
 }
