@@ -10,16 +10,8 @@ func main() {
 			l, _ := newRandomVBF(n, m)
 			fmt.Println("n =", n, ", m =", m)
 			moebius := l.Moebius()
-			moebius2 := moebius.Moebius()
-			if n == 2 {
-				fmt.Println("function:")
-				fmt.Println(l)
-				fmt.Println("one moebius: ")
-				fmt.Println(moebius)
-				fmt.Println("two moebius: ")
-				fmt.Println(moebius2)
-			}
-			fmt.Println("moebius(moebius(vbf)) == vbf :", l.isEqual(moebius2))
+			newmoebius := l.newMoebius()
+			fmt.Println("moebius(vbf) == newMoebius(vbf) :", moebius.isEqual(newmoebius))
 			fmt.Println("=============================================")
 		}
 	}

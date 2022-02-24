@@ -210,26 +210,6 @@ func (bf VectorBoolFunction) or(bf2 VectorBoolFunction) VectorBoolFunction {
 	return t
 }
 
-//generateMask() - генерирует функцию в которой каждая координата представляет собой
-//чередование step нулей и единиц
-func (bf VectorBoolFunction) generateMask(step int) VectorBoolFunction {
-	mask := VectorBoolFunction{
-		value:      make([]block, bf.rows),
-		rows:       bf.rows,
-		n:          bf.n,
-		m:          bf.m,
-		wastedBits: blockSize() - bf.m,
-	}
-	m := block(1<<blockSize() - 1)
-	for i := range mask.value {
-		if (i % (step)) == 0 {
-			m ^= block(1<<blockSize() - 1)
-		}
-		mask.value[i] = m
-	}
-	return mask
-}
-
 // Moebius - метод, выполняющий преобразование мёбиуса над заданной функцией.
 // возвращает полученную после преобразования функцию
 func (bf VectorBoolFunction) Moebius() VectorBoolFunction {
@@ -244,8 +224,19 @@ func (bf VectorBoolFunction) Moebius() VectorBoolFunction {
 	for i := range bf.value {
 		anf.value[i] = bf.value[i]
 	}
+
+	//doWeNeedToAdd показывает надо ли нам складывать значения или нет
+	doWeNeedToAdd := uint8(255)
 	for i := 0; i < anf.n; i++ {
-		anf = anf.xor(anf.shiftDown(1 << i).and(anf.generateMask(1 << i)))
+		for j := 0; j < anf.rows; j++ {
+			if j%(1<<i) == 0 {
+				doWeNeedToAdd ^= 255
+			}
+			if doWeNeedToAdd > 0 {
+				anf.value[j] ^= anf.value[j-(1<<i)]
+			}
+
+		}
 	}
 	return anf
 }
