@@ -298,3 +298,16 @@ func (bf VectorBoolFunction) printANF() string {
 
 	return res
 }
+
+//isEqual() - Проверяет две функции на равенство
+func (bf VectorBoolFunction) isEqual(bf2 VectorBoolFunction) bool {
+	if bf.n != bf2.n || bf.m != bf2.m {
+		return false
+	}
+	for i := range bf.value {
+		if bf.value[i] != bf2.value[i] {
+			return false
+		}
+	}
+	return true
+}
