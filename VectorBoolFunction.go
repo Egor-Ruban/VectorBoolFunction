@@ -312,8 +312,9 @@ func (bf VectorBoolFunction) isEqual(bf2 VectorBoolFunction) bool {
 // Задача выполняется в цикле по кличеству нулей среди значений переменных
 // Если при k нулей среди значений функции есть ненулевое, то степень равна n-k
 func (bf VectorBoolFunction) degree() int {
+	m := bf.Moebius()
 	for i := 0; i <= bf.n; i++ {
-		b := bf.isNotNull(bf.rows-1, i, 0)
+		b := m.isNotNull(bf.rows-1, i, 0)
 		if b {
 			return bf.n - i
 		}

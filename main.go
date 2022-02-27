@@ -7,9 +7,10 @@ func main() {
 }
 
 func test2() {
-	vbf, _ := newRandomVBF(3, 2)
-	fmt.Println(vbf)
-	fmt.Println(vbf.degree())
+	vbf, _ := newRandomVBF(3, 1)
+	m := vbf.Moebius()
+	fmt.Println(m)
+	fmt.Println("degree = ", m.degree())
 }
 
 func test1() {
