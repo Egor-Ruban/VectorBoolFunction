@@ -55,6 +55,11 @@ func (bf VectorBoolFunction) String() string {
 	return res
 }
 
+func (bf VectorBoolFunction) valueOf(i int) string {
+	formatString3 := "%0" + strconv.Itoa(blockSize()-bf.wastedBits) + "b\n" //Форматная строка для значений функции
+	return fmt.Sprintf(formatString3, bf.value[i]>>bf.wastedBits)
+}
+
 //newRandomVBF() - генерирует случайную векторную булеву функцию по заданным n и m
 func newRandomVBF(n, m int) (VectorBoolFunction, error) {
 	rand.Seed(time.Now().UnixNano())
@@ -301,4 +306,37 @@ func (bf VectorBoolFunction) isEqual(bf2 VectorBoolFunction) bool {
 		}
 	}
 	return true
+}
+
+// degree() - метод, возвращающий степень нелинейности функции.
+// Задача выполняется в цикле по кличеству нулей среди значений переменных
+// Если при k нулей среди значений функции есть ненулевое, то степень равна n-k
+func (bf VectorBoolFunction) degree() int {
+	for i := 0; i <= bf.n; i++ {
+		b := bf.isNotNull(bf.rows-1, i, 0)
+		if b {
+			return bf.n - i
+		}
+	}
+	return -1
+}
+
+// isNotNull() - метод, получающий на вход вектор переменных и информацию о том, сколько единиц из него нужно убрать
+// Возвращает true, если после удаления единиц нашлось значение функции не равное нулю
+func (bf VectorBoolFunction) isNotNull(initial, step, startFrom int) bool {
+	if startFrom+step > bf.n {
+		return false
+	}
+	if step == 0 {
+		if bf.value[initial] > 0 {
+			return true
+		}
+	} else {
+		for i := startFrom; i < bf.n; i++ {
+			if bf.isNotNull(initial-(1<<i), step-1, i+1) {
+				return true
+			}
+		}
+	}
+	return false
 }

@@ -1,18 +1,31 @@
 package main
 
-import (
-	"fmt"
-)
+import "fmt"
 
 func main() {
-	for n := 2; n < 20; n++ {
-		for m := 1; m < 4; m++ {
-			l, _ := newRandomVBF(n, m)
-			fmt.Println("n =", n, ", m =", m)
-			moebius := l.Moebius()
-			newmoebius := l.newMoebius()
-			fmt.Println("moebius(vbf) == newMoebius(vbf) :", moebius.isEqual(newmoebius))
-			fmt.Println("=============================================")
-		}
+	test2()
+}
+
+func test2() {
+	vbf, _ := newRandomVBF(3, 2)
+	fmt.Println(vbf)
+	fmt.Println(vbf.degree())
+}
+
+func test1() {
+	fmt.Println("Random (3,2) function")
+	vbf, _ := newRandomVBF(3, 2)
+	fmt.Println(vbf)
+	for i, v := range vbf.getWeight() {
+		fmt.Printf("w%d = %d\n", i, v)
 	}
+	fmt.Println("after Moebius transformation:")
+	mvbf := vbf.Moebius()
+	fmt.Println(mvbf)
+	fmt.Println(mvbf.printANF())
+	fmt.Println("\n========================\n")
+}
+
+func pow2(n int) int {
+	return 1 << n
 }
