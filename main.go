@@ -1,30 +1,28 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 func main() {
 	test2()
 }
 
 func test2() {
-	vbf, _ := newRandomVBF(3, 1)
-	m := vbf.Moebius()
-	fmt.Println(m)
-	fmt.Println("degree = ", m.degree())
-}
 
-func test1() {
-	fmt.Println("Random (3,2) function")
-	vbf, _ := newRandomVBF(3, 2)
-	fmt.Println(vbf)
-	for i, v := range vbf.getWeight() {
-		fmt.Printf("w%d = %d\n", i, v)
-	}
-	fmt.Println("after Moebius transformation:")
-	mvbf := vbf.Moebius()
-	fmt.Println(mvbf)
-	fmt.Println(mvbf.printANF())
-	fmt.Println("\n========================\n")
+	// Код для измерения
+
+	vbf, _ := newRandomVBF(29, 1)
+	//fmt.Println(vbf)
+	start := time.Now()
+	vbf.WHT()
+	duration := time.Since(start)
+	// Отформатированная строка,
+	// например, "2h3m0.5s" или "4.503μs"
+	fmt.Println(duration)
+	//fmt.Println(vbf.WHT())
+
 }
 
 func pow2(n int) int {

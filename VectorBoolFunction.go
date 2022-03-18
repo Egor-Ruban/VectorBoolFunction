@@ -84,6 +84,33 @@ func newRandomVBF(n, m int) (VectorBoolFunction, error) {
 	return bf, nil
 }
 
+//newRandomVBF() - генерирует случайную векторную булеву функцию по заданным n и m
+func newConstVBF(n, m int, b bool) (VectorBoolFunction, error) {
+	rand.Seed(time.Now().UnixNano())
+
+	//если n или m больше размера блока, то возвращает ошибку
+	if n > blockSize() || m > blockSize() {
+		return VectorBoolFunction{}, errors.New("n or m is too big")
+	}
+	//создание объекта функции
+	bf := VectorBoolFunction{
+		value:      make([]block, 1<<n), //создаём массив на 2^n элементов
+		rows:       1 << n,
+		n:          n,
+		m:          m,
+		wastedBits: blockSize() - m,
+	}
+
+	for i := 0; i < bf.rows; i++ {
+		k := 0
+		if b {
+			k = 1<<blockSize() - 1
+		}
+		bf.value[i] = block(k) << bf.wastedBits //генерирует m бит и сдвигает их к старшим разрядам
+	}
+	return bf, nil
+}
+
 //newRevVBF() - генерирует случайную обратимую векторную булеву функкцию по заданным n и m
 func newRevVBF(n, m int) (VectorBoolFunction, error) {
 	rand.Seed(time.Now().UnixNano())
@@ -240,7 +267,6 @@ func (bf VectorBoolFunction) Moebius() VectorBoolFunction {
 			if doWeNeedToAdd > 0 {
 				anf.value[j] ^= anf.value[j-(1<<i)]
 			}
-
 		}
 	}
 	return anf
@@ -319,7 +345,7 @@ func (bf VectorBoolFunction) degree() int {
 			return bf.n - i
 		}
 	}
-	return -1
+	return 0
 }
 
 // isNotNull() - метод, получающий на вход вектор переменных и информацию о том, сколько единиц из него нужно убрать
@@ -340,4 +366,42 @@ func (bf VectorBoolFunction) isNotNull(initial, step, startFrom int) bool {
 		}
 	}
 	return false
+}
+
+//WHT() - выполняет преобразования Уолша-Адамара. Возвращает m массивов с результатами
+func (bf VectorBoolFunction) WHT() [][]int {
+	//сначала создание квадратной матрицы и заполнение её 1 и -1, в зависимости от функции
+	wht := make([][]int, bf.m)
+	for i := range wht {
+		wht[i] = make([]int, bf.rows)
+		for j := 0; j < bf.rows; j++ {
+			t := (bf.value[j] >> (blockSize() - i - 1)) & 1
+			if t == 0 {
+				wht[i][j] = 1
+			} else {
+				wht[i][j] = -1
+			}
+		}
+	}
+
+	//дальше преобразование для каждой функции идёт по очереди в цикле
+	for m := 0; m < bf.m; m++ {
+		//i - указывает какой сейчас шаг
+		for i := 0; i < bf.n; i++ {
+			l := 1 << i //l - через сколько элементов находится тот, с которым мы будем складывать или вычитать
+			//в temp сохраняем результат предыдущего шага, так как массив мы будем изменять
+			temp := make([]int, bf.rows)
+			copy(temp, wht[m])
+			//j указывает на начало блока. Можно было бы и убрать этот цикл, но тогда надо делать сложные условия для k
+			for j := 0; j < bf.rows; j += 2 * l {
+				//k указывает какой элемент мы сейчас высчитываем
+				for k := j; k < j+l; k++ {
+					wht[m][k] = temp[k] + temp[k+l]
+					wht[m][k+l] = temp[k] - temp[k+l]
+				}
+			}
+		}
+	}
+
+	return wht
 }
