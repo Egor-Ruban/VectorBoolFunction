@@ -375,8 +375,7 @@ func (bf VectorBoolFunction) WHT() [][]int {
 	for i := range wht {
 		wht[i] = make([]int, bf.rows)
 		for j := 0; j < bf.rows; j++ {
-			t := (bf.value[j] >> (blockSize() - i - 1)) & 1
-			if t == 0 {
+			if ((bf.value[j] >> (blockSize() - i - 1)) & 1) == 0 {
 				wht[i][j] = 1
 			} else {
 				wht[i][j] = -1
@@ -386,18 +385,16 @@ func (bf VectorBoolFunction) WHT() [][]int {
 
 	//дальше преобразование для каждой функции идёт по очереди в цикле
 	for m := 0; m < bf.m; m++ {
-		//i - указывает какой сейчас шаг
-		for i := 0; i < bf.n; i++ {
-			l := 1 << i //l - через сколько элементов находится тот, с которым мы будем складывать или вычитать
-			//в temp сохраняем результат предыдущего шага, так как массив мы будем изменять
-			temp := make([]int, bf.rows)
-			copy(temp, wht[m])
+		//l - через сколько элементов находится тот, с которым мы будем складывать или вычитать
+		for l := 1; l < bf.rows; l *= 2 {
 			//j указывает на начало блока. Можно было бы и убрать этот цикл, но тогда надо делать сложные условия для k
 			for j := 0; j < bf.rows; j += 2 * l {
 				//k указывает какой элемент мы сейчас высчитываем
 				for k := j; k < j+l; k++ {
-					wht[m][k] = temp[k] + temp[k+l]
-					wht[m][k+l] = temp[k] - temp[k+l]
+					x := wht[m][k]
+					y := wht[m][k+l]
+					wht[m][k] = x + y
+					wht[m][k+l] = x - y
 				}
 			}
 		}
