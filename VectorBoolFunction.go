@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/rand"
 	"strconv"
 	"time"
@@ -368,7 +369,7 @@ func (bf VectorBoolFunction) isNotNull(initial, step, startFrom int) bool {
 	return false
 }
 
-//WHT() - выполняет преобразования Уолша-Адамара. Возвращает m массивов с результатами
+// WHT - выполняет преобразования Уолша-Адамара. Возвращает m массивов с результатами
 func (bf VectorBoolFunction) WHT() [][]int {
 	//сначала создание квадратной матрицы и заполнение её 1 и -1, в зависимости от функции
 	wht := make([][]int, bf.m)
@@ -401,4 +402,95 @@ func (bf VectorBoolFunction) WHT() [][]int {
 	}
 
 	return wht
+}
+
+//cor вычисляет степень корреляционной имунности. Для этого проверяет все наборы с весами от 1 до n и если
+//в преобразовании Уэлша-Адамара на наборе есть не только нули, то принимает за результат вес векторов из прошлого набора
+func (bf VectorBoolFunction) cor() []int {
+	res := make([]int, bf.m)
+	for i, v := range bf.WHT() {
+		for j := bf.n - 1; j >= 0; j-- {
+			b := isCorJ(bf.rows-1, j, 0, v, bf.n)
+			if !b {
+				break
+			}
+			res[i] = bf.n - j
+		}
+	}
+	return res
+}
+
+//isCorJ функция, возвращающая false,
+//если на наборе векторов с весом step в преобразовании Уэлша-Адамара присутствуют не только нули
+func isCorJ(initial int, step int, startFrom int, whtVector []int, n int) bool {
+	if startFrom+step > n {
+		return true
+	}
+	if step == 0 {
+		if whtVector[initial] != 0 {
+			return false
+		}
+	} else {
+		for i := startFrom; i < n; i++ {
+			if !isCorJ(initial-(1<<i), step-1, i+1, whtVector, n) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+//Affine - возвращает нелинейность каждой координаты
+// и векторную функцию, каждая кордината которой является НАП для соответствующей координаты исходной функции
+func (bf VectorBoolFunction) Affine() ([]int, VectorBoolFunction) {
+	nonlinearity := make([]int, bf.m)
+	maxPlaces := make([]int, bf.m)
+	isInversed := make([]int, bf.m)
+
+	//цикл по всем координатам
+	for i, v := range bf.WHT() {
+		max := 0
+		//находим максимальное абсолютное значение в преобразовании Уолша-Адамара.
+		//Сохраняем значение, позицию и отрицательное ли оно
+		for j, el := range v {
+			if math.Abs(float64(el)) > math.Abs(float64(max)) {
+				isInversed[i] = 0
+				if el < 0 {
+					isInversed[i] = 1
+				}
+				maxPlaces[i] = j
+				max = el
+			}
+		}
+		//Когда нашли максимальное - вычисляем нелинейность
+		nonlinearity[i] = (1 << (bf.n - 1)) - max/2
+		if max < 0 {
+			nonlinearity[i] = (1 << (bf.n - 1)) + max/2
+		}
+	}
+	return nonlinearity, bf.getAffineFunction(maxPlaces, isInversed)
+}
+
+//getAffineFunction - Получает на вход исходную функцию, НАП координат в числовом виде, а также добавочное слагаемое
+// 0, если значение в ПУА было положительным и 1, если было отрицательным для каждой координаты
+func (bf VectorBoolFunction) getAffineFunction(coordinated []int, isInversedCoordinates []int) VectorBoolFunction {
+	t := VectorBoolFunction{
+		value:      make([]block, bf.rows),
+		rows:       bf.rows,
+		n:          bf.n,
+		m:          bf.m,
+		wastedBits: blockSize() - bf.m,
+	}
+	for i, p := range coordinated {
+		for j := 0; j < bf.rows; j++ {
+			vars := p & j
+			res := 0
+			for k := 0; k < bf.n; k++ {
+				res ^= (vars >> k) & 1
+			}
+			res ^= isInversedCoordinates[i]
+			t.value[j] |= block(res << (blockSize() - i - 1))
+		}
+	}
+	return t
 }
