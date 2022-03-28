@@ -494,3 +494,64 @@ func (bf VectorBoolFunction) getAffineFunction(coordinated []int, isInversedCoor
 	}
 	return t
 }
+
+//isCoordinatesDegenerate проверят все координаты векторной булевой функции на наличие фиктивных переменных
+//Если у координаты есть фиктивные переменные, то она помечается единицей в результирующем векторе
+//и нулём, если она существенно зависит от всех своих переменных
+func (bf VectorBoolFunction) isCoordinatesDegenerate() block {
+	res := block(0)
+	anf := bf.Moebius()
+	for j := 0; j < bf.m; j++ {
+		significantVars := 0
+		for i := 1; i < bf.rows; i++ {
+			if (anf.value[i] >> (blockSize() - 1 - j) & 1) == 1 {
+				significantVars |= i
+			}
+		}
+		if significantVars != bf.rows-1 {
+			res |= 1 << (blockSize() - 1 - j)
+		}
+	}
+	return res
+}
+
+//isNonDegenerate - показывает является ли данная векторная функция невырожденной
+func (bf VectorBoolFunction) isNonDegenerate() bool {
+	return bf.isCoordinatesDegenerate() == 0
+}
+
+func newFunctionByHand() VectorBoolFunction {
+	fmt.Print("n? ")
+	n, m := 0, 0
+	fmt.Scanln(&n)
+	fmt.Print("m? ")
+	fmt.Scanln(&m)
+	t := VectorBoolFunction{
+		value:      make([]block, 1<<n),
+		rows:       1 << n,
+		n:          n,
+		m:          m,
+		wastedBits: blockSize() - m,
+	}
+	for i := 0; i < t.rows; i++ {
+		formatString := "value at %0" + strconv.Itoa(n) + "b? "
+		fmt.Printf(formatString, i)
+		temp := ""
+		fmt.Scanln(&temp)
+		if len(temp) != m {
+			fmt.Println("try again")
+			i--
+			continue
+		}
+		for j := 0; j < m; j++ {
+			if temp[j] != '0' && temp[j] != '1' {
+				fmt.Println("try again")
+				i--
+				break
+			}
+			t.value[i] |= block((temp[j]-'0')&1) << (blockSize() - j - 1)
+		}
+	}
+	fmt.Println()
+	return t
+}
