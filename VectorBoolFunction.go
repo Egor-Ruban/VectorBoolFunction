@@ -163,86 +163,6 @@ func newRevVBF(n, m int) (VectorBoolFunction, error) {
 	return VectorBoolFunction{}, errors.New("n > m")
 }
 
-//shiftDown() - метод, сдвигающий значения функции "Вниз" по таблице
-func (bf VectorBoolFunction) shiftDown(k int) VectorBoolFunction {
-	t := VectorBoolFunction{
-		value:      make([]block, bf.rows),
-		rows:       bf.rows,
-		n:          bf.n,
-		m:          bf.m,
-		wastedBits: blockSize() - bf.m,
-	}
-
-	for i := bf.rows - 1; i >= k; i-- {
-		t.value[i] = bf.value[i-k]
-	}
-	return t
-}
-
-//shiftUp() - метод, сдвигающий значения функции "Вверх" по таблице
-func (bf VectorBoolFunction) shiftUp(k int) VectorBoolFunction {
-	t := VectorBoolFunction{
-		value:      make([]block, bf.rows),
-		rows:       bf.rows,
-		n:          bf.n,
-		m:          bf.m,
-		wastedBits: blockSize() - bf.m,
-	}
-
-	for i := 0; i < bf.rows-k; i++ {
-		t.value[i] = bf.value[i+k]
-	}
-	return t
-}
-
-//xor() - покомпонентное сложение по модулю два двух таблиц значений ВБФ
-func (bf VectorBoolFunction) xor(bf2 VectorBoolFunction) VectorBoolFunction {
-	t := VectorBoolFunction{
-		value:      make([]block, bf.rows),
-		rows:       bf.rows,
-		n:          bf.n,
-		m:          bf.m,
-		wastedBits: blockSize() - bf.m,
-	}
-
-	for i := 0; i < bf.rows; i++ {
-		t.value[i] = bf.value[i] ^ bf2.value[i]
-	}
-	return t
-}
-
-//and() - покомпонентное умножение двух таблиц значений ВБФ
-func (bf VectorBoolFunction) and(bf2 VectorBoolFunction) VectorBoolFunction {
-	t := VectorBoolFunction{
-		value:      make([]block, bf.rows),
-		rows:       bf.rows,
-		n:          bf.n,
-		m:          bf.m,
-		wastedBits: blockSize() - bf.m,
-	}
-
-	for i := 0; i < bf.rows; i++ {
-		t.value[i] = bf.value[i] & bf2.value[i]
-	}
-	return t
-}
-
-//and() - покомпонентное сложение двух таблиц значений ВБФ
-func (bf VectorBoolFunction) or(bf2 VectorBoolFunction) VectorBoolFunction {
-	t := VectorBoolFunction{
-		value:      make([]block, bf.rows),
-		rows:       bf.rows,
-		n:          bf.n,
-		m:          bf.m,
-		wastedBits: blockSize() - bf.m,
-	}
-
-	for i := 0; i < bf.rows; i++ {
-		t.value[i] = bf.value[i] | bf2.value[i]
-	}
-	return t
-}
-
 // Moebius - метод, выполняющий преобразование мёбиуса над заданной функцией.
 // возвращает полученную после преобразования функцию
 func (bf VectorBoolFunction) Moebius() VectorBoolFunction {
@@ -553,5 +473,45 @@ func newFunctionByHand() VectorBoolFunction {
 		}
 	}
 	fmt.Println()
+	return t
+}
+
+//functionByHand - возволяет создать функцию, вводя её на клавиатуре
+func functionByHand() VectorBoolFunction {
+	fmt.Print("n ? ")
+	n := 0
+	fmt.Scanln(&n)
+	fmt.Print("m ? ")
+	m := 0
+	fmt.Scanln(&m)
+	t := VectorBoolFunction{
+		value:      make([]block, 1<<n),
+		rows:       1 << n,
+		n:          n,
+		m:          m,
+		wastedBits: blockSize() - m,
+	}
+
+	vars := "%0" + strconv.Itoa(n) + "b ? "
+	for i := 0; i < (1 << n); i++ {
+		fmt.Printf(vars, i)
+		value := ""
+		fmt.Scanln(&value)
+		if len(value) != m {
+			fmt.Println("try again")
+			i--
+		}
+		for j := 0; j < m; j++ {
+			if value[j] != '0' && value[j] != '1' {
+				fmt.Println("try again")
+				i--
+				break
+			}
+			t.value[i] |= block(value[j]-'0') << (32 - 1 - j)
+		}
+	}
+
+	fmt.Println()
+
 	return t
 }

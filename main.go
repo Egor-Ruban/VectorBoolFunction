@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	_ "github.com/xuri/excelize/v2"
 )
 
@@ -10,7 +11,10 @@ type Test struct {
 }
 
 func main() {
-	nonDegenerateTest()
+	bf := functionByHand()
+	fmt.Println(bf.Moebius())
+	fmt.Println(bf.Moebius().printANF())
+	//nonDegenerateTest()
 }
 
 func pow2(n int) int {
