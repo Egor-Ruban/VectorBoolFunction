@@ -515,3 +515,107 @@ func functionByHand() VectorBoolFunction {
 
 	return t
 }
+
+func specialFunction() VectorBoolFunction {
+	//n := 4
+	n := 6
+	t := VectorBoolFunction{
+		value:      make([]block, 1<<n),
+		rows:       1 << n,
+		n:          n,
+		m:          1,
+		wastedBits: blockSize() - n,
+	}
+
+	t.value[3] = 1 << (32 - 1)
+	t.value[12] = 1 << (32 - 1)
+	if n > 4 {
+		t.value[48] = 1 << (32 - 1)
+	}
+	return t.Moebius()
+}
+
+func (bf VectorBoolFunction) autoCorrelation() [][]int {
+	//сначала получаем коэффициенты Уошла-Адамара и возводим их в квадрат
+	WHCoef := bf.WHT()
+	for i := range WHCoef {
+		for j := range WHCoef[i] {
+			WHCoef[i][j] *= WHCoef[i][j]
+		}
+	}
+
+	//дальше преобразование для каждой функции идёт по очереди в цикле
+	for m := 0; m < bf.m; m++ {
+		//l - через сколько элементов находится тот, с которым мы будем складывать или вычитать
+		for l := 1; l < bf.rows; l *= 2 {
+			//j указывает на начало блока. Можно было бы и убрать этот цикл, но тогда надо делать сложные условия для k
+			for j := 0; j < bf.rows; j += 2 * l {
+				//k указывает какой элемент мы сейчас высчитываем
+				for k := j; k < j+l; k++ {
+					x := WHCoef[m][k]
+					y := WHCoef[m][k+l]
+					WHCoef[m][k] = x + y
+					WHCoef[m][k+l] = x - y
+				}
+			}
+		}
+	}
+
+	for i := range WHCoef {
+		for j := range WHCoef[i] {
+			WHCoef[i][j] >>= bf.n
+		}
+	}
+
+	return WHCoef
+}
+
+func (bf VectorBoolFunction) CN() []int {
+	CN := make([]int, bf.m)
+	autoCorr := bf.autoCorrelation()
+	for i := 0; i < bf.m; i++ {
+		max := 0
+		for j := 1; j < bf.rows; j++ {
+			if Abs(autoCorr[i][j]) > max {
+				max = Abs(autoCorr[i][j])
+			}
+		}
+		CN[i] = (1 << (bf.n - 2)) - (max >> 2)
+	}
+	return CN
+}
+
+func (bf VectorBoolFunction) maxPC() []int {
+	maxPC := make([]int, bf.m)
+	for i, v := range bf.autoCorrelation() {
+		for j := bf.n - 1; j >= 0; j-- {
+			b := isNotNullAC(bf.rows-1, j, 0, v, bf.n)
+			if b {
+				break
+			}
+			maxPC[i] = bf.n - j
+		}
+	}
+
+	return maxPC
+}
+
+//isNotNullAC функция, возвращающая true,
+//если на наборе векторов с весом step автокорелляция не всегда равна нулю
+func isNotNullAC(initial int, step int, startFrom int, ac []int, n int) bool {
+	if startFrom+step > n {
+		return false
+	}
+	if step == 0 {
+		if ac[initial] != 0 {
+			return true
+		}
+	} else {
+		for i := startFrom; i < n; i++ {
+			if isNotNullAC(initial-(1<<i), step-1, i+1, ac, n) {
+				return true
+			}
+		}
+	}
+	return false
+}

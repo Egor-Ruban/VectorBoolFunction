@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/xuri/excelize/v2"
-	"strconv"
 )
 
 func nonDegenerateTest() {
@@ -19,15 +18,16 @@ func nonDegenerateTest() {
 	for i := range res {
 		res[i] = make([]Test, 40)
 	}
-	for i := 0; i < 5000; i++ {
-		for n := 1; n < 7; n++ {
-			for m := n; m <= 32; m++ {
-				bf, _ := newRevVBF(n, m)
+	for i := 0; i < 10000000; i++ {
+		for n := 6; n < 7; n++ {
+			for m := n; m <= 6; m++ {
+				bf, _ := newRandomVBF(n, m)
 				if bf.isNonDegenerate() {
 					res[n][m].sum++
 				}
 				res[n][m].count++
-				i := strconv.Itoa(1 + ((n - 1) * 30) + m)
+				//i := strconv.Itoa(1 + ((n - 1) * 30) + m)
+				i := "2"
 				f.SetCellValue("Sheet1", "A"+i, n)
 				f.SetCellValue("Sheet1", "B"+i, m)
 				f.SetCellValue("Sheet1", "C"+i, res[n][m].sum)

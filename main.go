@@ -11,12 +11,19 @@ type Test struct {
 }
 
 func main() {
-	bf := functionByHand()
-	fmt.Println(bf.Moebius())
-	fmt.Println(bf.Moebius().printANF())
-	//nonDegenerateTest()
+	bf := specialFunction()
+	fmt.Println(bf.autoCorrelation())
+	fmt.Println(bf.maxPC())
 }
 
 func pow2(n int) int {
 	return 1 << n
+}
+
+func Abs(n int) int {
+	if n < 0 {
+		return -n
+	} else {
+		return n
+	}
 }
